@@ -15,14 +15,15 @@
 /* 모달 내부 컨테이너 */
 .modalContent {
   background: rgb(43,47,53);
-  border-radius: 10px;
-  width: 400px;
-  padding: 25px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  width: 420px;              /* 사진 크기 유지 */
+  padding: 20px 25px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   overflow-y: auto;
+  color: #fff;
 }
 
 /* 모달 상단 헤더 */
@@ -30,79 +31,86 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 
 .modalHeader h3 {
   margin: 0;
+  font-size: 1.4rem;
 }
 
-/* 닫기 버튼 */
 .closeBtn {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
+  color: #bbb;
   cursor: pointer;
+  transition: color 0.2s ease;
+}
+.closeBtn:hover {
+  color: #fff;
 }
 
-/* 입력 영역 전체 */
+/* 입력 영역 */
 .modalInContent {
   flex-grow: 1;
 }
 
-/* 각 입력 블록 스타일 */
 .formGroup {
   display: flex;
   flex-direction: column;
-  margin-bottom: 20px;
-  padding: 0 8px;
+  margin-bottom: 15px;
 }
 
-/* 첫 번째 입력 블록만 상단 여백 추가 */
-.formGroup:first-of-type {
-  margin-top: 10px;
-}
-
-/* 라벨과 입력창 사이 여백 */
 .formGroup label {
+  font-weight: bold;
   margin-bottom: 6px;
+  color: #ddd;
 }
 
-/* 입력창 및 드롭다운 공통 스타일 */
-.modalInput,
-.modalSelect {
-  width: 100%;
-  padding: 8px;
-  font-size: 1rem;
-  border: 1px solid #ccc;
+/* 정보 텍스트 */
+.infoText {
+  background: #1e1f23;
+  padding: 8px 12px;
   border-radius: 6px;
-  box-sizing: border-box;
+  color: #eee;
+  font-size: 1rem;
 }
 
-/* 하단 버튼 영역 */
+/* 태그 영역 */
+.tagContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tagBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #2c2f36;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+/* 하단 버튼 */
 .footerArea {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 8px;
 }
 
-/* 방 만들기 버튼 */
-.createBtn {
+.joinBtn {
   padding: 10px 20px;
-}
-
-.tagBtn {
-  margin: 4px;
-  padding: 6px 12px;
-  border: 1px solid #aaa;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
-  background: #222;
-  color: #fff;
+  font-weight: bold;
+  background-color: #4CAF50;
+  color: white;
+  transition: background-color 0.2s ease;
 }
 
-.tagBtn.selected {
-  background: #4CAF50;
-  border-color: #4CAF50;
+.joinBtn:hover {
+  background-color: #45a049;
 }
