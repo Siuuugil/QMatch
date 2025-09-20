@@ -1,20 +1,37 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { LogContext } from '../../App.jsx';
-import './CreateRoomModal.css';
+import './RoomSettingsModal.css';
 
-function CreateRoomModal({ setOpenModal, onRoomCreated }) {
+function RoomSettingsModal({ open, onClose, room, onRoomUpdated }) {
   const [name, setName] = useState('');
   const [gameName, setGameName] = useState('');
   const [tags, setTags] = useState([]);                 // 태그 목록
   const [selectedTags, setSelectedTags] = useState([]); // 사용자가 선택한 태그
   const { userData } = useContext(LogContext);
   const [errorMsg, setErrorMsg] = useState('');         // 커스텀 에러 메시지
-  const [maxUsers, setMaxUsers] = useState(5);         // 방 생성 시 기본값
+  const [maxUsers, setMaxUsers] = useState(5);         // 방 인원
   const [joinType, setJoinType] = useState('approval'); // 입장 방식: 'approval' (방장 승인) 또는 'free' (자유 입장)
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // 모달이 열릴 때 현재 방 정보로 초기화
+  useEffect(() => {
+    if (open && room) {
+      setName(room.name || '');
+      setGameName(room.gameName || '');
+      setMaxUsers(room.maxUsers || 5);
+      setJoinType(room.joinType || 'approval');
+      setSelectedTags(room.tagNames ? room.tagNames.map(tagName => {
+        // tagName으로부터 tagId를 찾아야 함
+        const tag = tags.find(t => t.tagName === tagName);
+        return tag ? tag.id : null;
+      }).filter(Boolean) : []);
+    }
+  }, [open, room, tags]);
 
   // 모달 닫기 핸들러
   const handleClose = () => {
-    setOpenModal(false);
+    setErrorMsg('');
+    onClose?.();
   };
 
   // 모달 배경 클릭 처리
@@ -38,10 +55,9 @@ function CreateRoomModal({ setOpenModal, onRoomCreated }) {
     }
   };
 
-  // 방 생성 API 호출
-  const createRoom = async () => {
+  // 방 설정 업데이트 API 호출
+  const updateRoom = async () => {
     if (!name.trim() || !gameName.trim()) {
-      // alert("채팅방 이름과 게임을 입력해주세요!");
       setErrorMsg("채팅방 이름과 게임을 입력해주세요!");
       return;
     }
@@ -56,30 +72,37 @@ function CreateRoomModal({ setOpenModal, onRoomCreated }) {
       return;
     }
 
+    if (maxUsers < room.currentUsers) {
+      setErrorMsg("현재 인원보다 적게 설정할 수 없습니다.");
+      return;
+    }
+
+    setIsUpdating(true);
+
     // 숫자 배열로 변환
     const tagIds = selectedTags.map(id => Number(id));
 
     const payload = {
+      requesterUserId: userData.userId,
       chatName: name,
       gameName,
       tags: tagIds,                    // 숫자 배열
-      creatorUserId: userData.userId,   
       maxUsers,
       joinType                         // 입장 방식 추가
     };
 
-    console.log("📦 createRoom payload:", payload);
+    console.log("📦 updateRoom payload:", payload);
 
     try {
-      const res = await fetch('/api/chat/rooms', {
-        method: 'POST',
+      const res = await fetch(`/api/chat/rooms/${room.id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         // 백엔드가 ResponseStatusException으로 보낸 바디 읽기
-        let msg = '방 생성 실패';
+        let msg = '방 설정 업데이트 실패';
         try {
           const errBody = await res.json();
           console.log("🔎 error body:", errBody);
@@ -89,22 +112,21 @@ function CreateRoomModal({ setOpenModal, onRoomCreated }) {
       }
 
       const data = await res.json();
-      console.log("방 생성 완료:", data);
+      console.log("방 설정 업데이트 완료:", data);
       
-      // 방장은 모든 방에서 자동으로 입장 (자유 입장 방과 방장 승인 방 모두)
-      onRoomCreated?.(data);
-      
-      // 방장이 자동으로 입장하도록 바로 채팅방으로 이동
-      if (window.location.pathname !== '/') {
-        window.location.href = '/';
-      }
+      // 부모 컴포넌트에 업데이트 알림
+      onRoomUpdated?.(data);
       
       handleClose();
     } catch (err) {
       console.error(err);
-      alert(err.message || '방 생성 중 오류가 발생했습니다.');
+      setErrorMsg(err.message || '방 설정 업데이트 중 오류가 발생했습니다.');
+    } finally {
+      setIsUpdating(false);
     }
   };
+
+  if (!open || !room) return null;
 
   return (
     // 모달 전체 배경
@@ -114,7 +136,7 @@ function CreateRoomModal({ setOpenModal, onRoomCreated }) {
         
         {/* 모달 헤더 */}
         <div className="modalHeader">
-          <h3>채팅방 생성</h3>
+          <h3>방 설정</h3>
           <button className="closeBtn" onClick={handleClose}>✖</button>
         </div>
         {errorMsg && <div className="errorMsg">{errorMsg}</div>}
@@ -140,9 +162,9 @@ function CreateRoomModal({ setOpenModal, onRoomCreated }) {
           </div>
 
           <div className="formGroup">
-            <label>최대 인원 수</label>
+            <label>최대 인원</label>
             <input
-              type="text"
+              type="number"
               className="modalInput"
               value={maxUsers}
               min={2}
@@ -150,9 +172,12 @@ function CreateRoomModal({ setOpenModal, onRoomCreated }) {
               onChange={(e) => setMaxUsers(Number(e.target.value))}
               required
             />
-            <small>(2 ~ 20명)</small>
+            <small>(2 ~ 20명, 현재: {room.currentUsers}명)</small>
             {(maxUsers < 2 || maxUsers > 20) && (
               <p style={{ color: "red" }}>방 인원은 2~20명 사이여야 합니다.</p>
+            )}
+            {maxUsers < room.currentUsers && (
+              <p style={{ color: "red" }}>현재 인원보다 적게 설정할 수 없습니다.</p>
             )}
           </div>
 
@@ -205,11 +230,17 @@ function CreateRoomModal({ setOpenModal, onRoomCreated }) {
 
         {/* 하단 버튼 영역 */}
         <div className="footerArea">
-          <button className="createBtn" onClick={createRoom}>방 만들기</button>
+          <button 
+            className="updateBtn" 
+            onClick={updateRoom}
+            disabled={isUpdating}
+          >
+            {isUpdating ? '업데이트 중...' : '설정 업데이트'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-export default CreateRoomModal;
+export default RoomSettingsModal;
